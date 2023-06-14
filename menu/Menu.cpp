@@ -169,6 +169,10 @@ void Menu::wczytajGraf(string nazwa_pliku) {
                         return;
                     }
                 }
+
+                grafLista.kasujGraf();
+                grafMacierz.kasujGraf();
+
                 krawedzie = tab[0];
                 wierzcholki = tab[1];
                 startowy = tab[2];

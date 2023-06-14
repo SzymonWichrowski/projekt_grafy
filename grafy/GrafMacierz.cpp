@@ -8,8 +8,8 @@
 void GrafMacierz::nowyGraf(int wierzcholki) {
 
     this -> wierzcholki = wierzcholki;
-    macierz_nieskierowany.resize(wierzcholki, vector<int>(wierzcholki, -1));
-    macierz_skierowany.resize(wierzcholki, vector<int>(wierzcholki, -1));
+    macierz_nieskierowany.resize(wierzcholki, vector<int>(wierzcholki, INT_MIN));
+    macierz_skierowany.resize(wierzcholki, vector<int>(wierzcholki, INT_MIN));
 }
 
 void GrafMacierz::nieskierowanyWypisz() {
@@ -49,7 +49,7 @@ void GrafMacierz::nowaKrawedz(int wierzcholek1, int wierzcholek2, int waga) {
     //dla grafu nieskierowanego
     if (wierzcholek1 >= 0 && wierzcholek1 < wierzcholki &&
         wierzcholek2 >= 0 && wierzcholek2 < wierzcholki) {
-        if (macierz_nieskierowany[wierzcholek1][wierzcholek2] == -1) {
+        if (macierz_nieskierowany[wierzcholek1][wierzcholek2] == INT_MIN) {
             macierz_nieskierowany[wierzcholek1][wierzcholek2] = waga;
             macierz_nieskierowany[wierzcholek2][wierzcholek1] = waga;
         }
@@ -64,14 +64,12 @@ void GrafMacierz::nowaKrawedz(int wierzcholek1, int wierzcholek2, int waga) {
     //dla grafu skierowanego
     if (wierzcholek1 >= 0 && wierzcholek1 < wierzcholki &&
         wierzcholek2 >= 0 && wierzcholek2 < wierzcholki) {
-        if (macierz_skierowany[wierzcholek1][wierzcholek2] == -1) {
+        if (macierz_skierowany[wierzcholek1][wierzcholek2] == INT_MIN) {
             macierz_skierowany[wierzcholek1][wierzcholek2] = waga;
         }
-        else {
-            if (waga < macierz_nieskierowany[wierzcholek1][wierzcholek2]) {
-                macierz_nieskierowany[wierzcholek1][wierzcholek2] = waga;
+        else if (waga < macierz_skierowany[wierzcholek1][wierzcholek2]) {
+                macierz_skierowany[wierzcholek1][wierzcholek2] = waga;
             }
-        }
     }
 }
 
@@ -84,14 +82,14 @@ void GrafMacierz::algorytmPrima() {
 
     vector<bool> odwiedzone(wierzcholki, false);  // Tablica odwiedzonych wierzchołków
     vector<int> koszty(wierzcholki, INT_MAX);  // Tablica kosztów dojścia do wierzchołków
-    vector<int> poprzedniki(wierzcholki, -1);  // Tablica poprzedników dla wierzchołków
+    vector<int> poprzedniki(wierzcholki, INT_MIN);  // Tablica poprzedników dla wierzchołków
     koszty[0] = 0;  // Koszt dojścia do pierwszego wierzchołka jest zerowy
 
     // Zbiór krawędzi MST
     set<pair<int, int>> mst;
 
     for (int i = 0; i < wierzcholki - 1; i++) {
-        int aktualny = -1;  // Aktualnie wybrany wierzchołek
+        int aktualny = INT_MIN;  // Aktualnie wybrany wierzchołek
         int najmniejszyKoszt = INT_MAX;  // Najmniejszy koszt dojścia
 
         // Wybór wierzchołka o najmniejszym koszcie spośród nieodwiedzonych
@@ -105,12 +103,12 @@ void GrafMacierz::algorytmPrima() {
         odwiedzone[aktualny] = true;  // Oznaczanie bieżącego wierzchołka jako odwiedzony
 
         // Dodawanie krawędzi do MST
-        if (poprzedniki[aktualny] != -1)
+        if (poprzedniki[aktualny] != INT_MIN)
             mst.insert({aktualny, poprzedniki[aktualny]});
 
         // Aktualizacja kosztów dojścia i poprzedników dla sąsiadujących wierzchołków
         for (int v = 0; v < wierzcholki; v++) {
-            if (!odwiedzone[v] && macierz_nieskierowany[aktualny][v] != -1 && macierz_nieskierowany[aktualny][v] < koszty[v]) {
+            if (!odwiedzone[v] && macierz_nieskierowany[aktualny][v] != INT_MIN && macierz_nieskierowany[aktualny][v] < koszty[v]) {
                 koszty[v] = macierz_nieskierowany[aktualny][v];
                 poprzedniki[v] = aktualny;
             }
@@ -152,7 +150,7 @@ void GrafMacierz::algorytmKruskala() {
     vector<Krawedz> krawedzie;
     for (int i = 0; i < wierzcholki; i++) {
         for (int j = 0; j < wierzcholki; j++) {
-            if (macierz_nieskierowany[i][j] != -1) {
+            if (macierz_nieskierowany[i][j] != INT_MIN) {
                 krawedzie.push_back(Krawedz(i, j, macierz_nieskierowany[i][j]));
             }
         }
@@ -208,7 +206,7 @@ void GrafMacierz::algorytmDijkstry(int poczatek) {
 
     // Inicjalizacja tablic odległości i poprzedników
     vector<int> odleglosci(wierzcholki, numeric_limits<int>::max());
-    vector<int> poprzednicy(wierzcholki, -1);
+    vector<int> poprzednicy(wierzcholki, INT_MIN);
 
     // Ustawienie odległości wierzchołka początkowego na 0
     odleglosci[poczatek] = 0;
@@ -223,16 +221,27 @@ void GrafMacierz::algorytmDijkstry(int poczatek) {
     while (!kolejka.empty()) {
         // Pobranie wierzchołka o najmniejszej odległości z kolejki
         int aktualnyWierzcholek = kolejka.top().second;
+        int aktualnaOdleglosc = kolejka.top().first;
         kolejka.pop();
+
+        // Sprawdzenie, czy aktualny wierzchołek został już odwiedzony
+        if (aktualnaOdleglosc > odleglosci[aktualnyWierzcholek]) {
+            continue; // Przejdź do kolejnego wierzchołka w kolejce
+        }
 
         // Przejście przez wiersz macierzy dla aktualnego wierzchołka
         for (int sasiad = 0; sasiad < wierzcholki; sasiad++) {
             int waga = macierz_skierowany[aktualnyWierzcholek][sasiad];
 
             // Sprawdzenie, czy istnieje krawędź między wierzchołkami
-            if (waga != -1) {
+            if (waga != INT_MIN) {
                 // Sprawdzenie, czy nowa odległość jest mniejsza od dotychczasowej
                 if (odleglosci[aktualnyWierzcholek] + waga < odleglosci[sasiad]) {
+                    if(waga < 0) {
+                        cout << "Waga ujemna znaleziona! Algorytm zostanie przerwany." << endl;
+                        return;
+                    }
+
                     odleglosci[sasiad] = odleglosci[aktualnyWierzcholek] + waga;
                     poprzednicy[sasiad] = aktualnyWierzcholek;
 
@@ -258,7 +267,7 @@ void GrafMacierz::algorytmDijkstry(int poczatek) {
             cout << "Sciezka do wierzcholka " << i << ": ";
             vector<int> sciezka;
             int wierzcholek = i;
-            while (wierzcholek != -1) {
+            while (wierzcholek != INT_MIN) {
                 sciezka.push_back(wierzcholek);
                 wierzcholek = poprzednicy[wierzcholek];
             }
@@ -283,7 +292,7 @@ void GrafMacierz::algorytmBellmanaForda(int poczatek) {
 
     // Inicjalizacja tablic odległości i poprzedników
     vector<int> odleglosci(wierzcholki, numeric_limits<int>::max());
-    vector<int> poprzednicy(wierzcholki, -1);
+    vector<int> poprzednicy(wierzcholki, INT_MIN);
 
     // Ustawienie odległości wierzchołka początkowego na 0
     odleglosci[poczatek] = 0;
@@ -295,7 +304,7 @@ void GrafMacierz::algorytmBellmanaForda(int poczatek) {
                 int waga = macierz_skierowany[j][k];
 
                 // Sprawdzenie, czy można zrelaksować krawędź
-                if (odleglosci[j] != numeric_limits<int>::max() && waga != -1 && odleglosci[j] + waga < odleglosci[k]) {
+                if (odleglosci[j] != numeric_limits<int>::max() && waga != INT_MIN && odleglosci[j] + waga < odleglosci[k]) {
                     odleglosci[k] = odleglosci[j] + waga;
                     poprzednicy[k] = j;
                 }
@@ -309,7 +318,7 @@ void GrafMacierz::algorytmBellmanaForda(int poczatek) {
             int waga = macierz_skierowany[j][k];
 
             // Sprawdzenie, czy można zrelaksować krawędź
-            if (odleglosci[j] != numeric_limits<int>::max() && waga != -1 && odleglosci[j] + waga < odleglosci[k]) {
+            if (odleglosci[j] != numeric_limits<int>::max() && waga != INT_MIN && odleglosci[j] + waga < odleglosci[k]) {
                 cout << "Graf zawiera ujemny cykl." << endl;
                 return;
             }
@@ -330,7 +339,7 @@ void GrafMacierz::algorytmBellmanaForda(int poczatek) {
         } else {
             cout << "Sciezka do wierzcholka " << i << ": " << i;
             int wierzcholek = poprzednicy[i];
-            while (wierzcholek != -1) {
+            while (wierzcholek != INT_MIN) {
                 cout << " <- " << wierzcholek;
                 wierzcholek = poprzednicy[wierzcholek];
             }

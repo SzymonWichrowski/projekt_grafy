@@ -200,7 +200,13 @@ void GrafLista::algorytmDijkstry(int poczatek) {
     while (!kolejka.empty()) {
         // Pobranie wierzchołka o najmniejszej odległości z kolejki
         int aktualnyWierzcholek = kolejka.top().second;
+        int aktualnaOdleglosc = kolejka.top().first;
         kolejka.pop();
+
+        // Sprawdzenie, czy aktualny wierzchołek został już odwiedzony
+        if (aktualnaOdleglosc > odleglosci[aktualnyWierzcholek]) {
+            continue; // Przejdź do kolejnego wierzchołka w kolejce
+        }
 
         // Przejście przez listę sąsiadów aktualnego wierzchołka
         for (const auto& krawedz : lista_skierowany[aktualnyWierzcholek]) {
@@ -209,6 +215,11 @@ void GrafLista::algorytmDijkstry(int poczatek) {
 
             // Sprawdzenie, czy nowa odległość jest mniejsza od dotychczasowej
             if (odleglosci[aktualnyWierzcholek] + waga < odleglosci[sasiad]) {
+                if (waga < 0) {
+                    cout << "Waga ujemna znaleziona! Algorytm zostanie przerwany" << endl;
+                    return;
+                }
+
                 odleglosci[sasiad] = odleglosci[aktualnyWierzcholek] + waga;
                 poprzednicy[sasiad] = aktualnyWierzcholek;
 
